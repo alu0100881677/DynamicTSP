@@ -1,87 +1,35 @@
-# jMetalSP: A framework for Big Data Optimization with multi-objective metaheuristics
+# Problema de Viajante de Comercio
 
-**jMetalSP** is a software platform for dynamic multi-objective Big Data Optimization. It combines the features of the [jMetal](http://jmetal.github.io/jMetal/) multi-objective optimization framework with the [Apache Spark](http://spark.apache.org/) cluster computing system. jMetal provides the optimization infrastructure for implementing both the Big Data optimization problems and the dynamic metaheuristic to solve them; Spark allows to manage the streaming data sources, allowing to effectively use the computing power of Hadoop clusters when processing large amounts of data.
+Este repositorio contiene el código necesario para resolver una variante de los problemas de viajante de comercio. El problema que se resuelve es un problema dínamico y multiobjetivo.
 
-Please, note that jMetalSP is a project in continuous development. If you have any question or suggestion of desirable features to be included, feel free to contact us. The current version is jMetalSP 2.0.
+## Instalación
+* En primer lugar debe de clonar este repositorio
+* Una vez clonado, situese en en la base del directorio y ejecute el script bash [`configurador.sh`]. Este script se encargará de instalar las dependencias necesarias del proyecto.
 
-## Current status
-We are currently working on a redesign of the framework with the following ideas in mind:
-* Spark is uncoupled in a separate module, so users only interested in non-Big Data dynamic optimization problems can use the core of jMetal without Spark.
-* The architecture is being refactored:
-  * The have introduced the observer pattern to link the stream data sources and algorithm outputs (the observables) with the problems and data consumers (the observers).
-  * Unnecessary classes (i.e. problem and algorithm builders) have been removed.
-  * Two different runtime systems can be used: plain Java and Java+Spark.
-* We are refactoring the example published in the MOD 2016 paper becase the original Web service to obtain traffic data has changed. 
-* Algorithms included: 
-  * Dynamic versions of NSGA-II, NSGA-III, R-NSGA-II, MOCell, SMPSO
-  * Dynamic version of WASF-GA, algorithm including a preference articulation mechanism based on a reference point.
-  * A new algorithm called InDM2 (Interactive Dynamic Multi-Objective Decision Making).
-* A component to draw the Pareto front approximations in a chart during the algorithm execution.
-* Problems included: bi-objective TSP, FDA benchmark.
+## Uso
+El repositorio contiene tres modulos distintos los cuales pueden compenetrar su funcionamiento. Para arrancar cada uno de los modulos necesitará una terminal para cada uno de ellos.
+* El primer modulo, encargado de la generación de peticiones de movilidad es ejecutado desde el directorio raiz del repositorio mediante el comando *./generadorPeticiones.sh*. A este modulo debemos de pasarle una serie de argumentos que establezcan su funcionamiento:   
+   * nombre del fichero donde se generan las peticiones. Este fichero estará en la carpeta jmetalsp-examples/Datos.
+   * número de ciudades que contiene el problema para el que simulamos cambios.
+   * parametro númerico que representa el coste máximo de viajar entre dos ciudades.
+   * número de milisegundos entre la generación de cada cambio (5 segundos = 5000)
 
+* El segundo modulo, es el encargado de resolver el problema, para ello hace uso del algoritmo nsga-ii. Para configurar este modulo debemos de pasar una serie de parametros a *./solucionadorProblema.sh*:
+   * fichero de distancias
+   * fichero de costes
+   * nombre del fichero con las peticiones
+   * nombre del directorio que almacena los frentes de pareto
+   * periodo de lectura de nuevas peticiones en milisegundos(2000)
 
-## Architecture
-The architecture of the current development version of jMetalSP (Version 1.1) is depicted in the following UML class diagram:
+Todos los ficheros que se pasen como parámetro deben de estar en  jmetal-examples/Datos y solo debe indicar su nombre.
+* El tercer modulo representa las soluciones obtenidas por el segundo modulo mediante un servicio web. Para ponerlo en funcionamiento se debe de ejecutar el script *./visorPareto.sh* al que se le deben de pasar una serie de argumentos:
+   * nombre del directorio donde que almacena los frentes de pareto
+   * periodo en milisegundos que pasa entre la traducción de cada fichero, se recomienda usar 2000.
 
-![jMetalSP architecture](https://github.com/jMetal/jMetalSP/blob/master/resources/jMetalSPArchitecture.png)
+### Ejemplo de ejecución
+Tal y como se ha mencionado previamente cada modulo debe de ser ejecutado en una terminal distinta. Además para que el funcionamiento del programa sea el adecuado, se deben de ejecutar los modulos en orden.
+* **Primer modulo** --> ./generadorPeticiones.sh generacion.txt 10 2000 5000
 
-A `jMetalSPApplication` is composed of: 
-* An instance of the `DynamicProblem` class (the problem to be solved).
-* An instance of the `DynamicAlgorithm` class (the algorithm to use).
-* One or more `StreamingDataSource` objects, which process the incoming data and as a result they change make some change in the `DynamicProblem`.
-* One or more `AlgorithmDataConsumer` objects, which receive the results being generated by the `DynamicAlgorithm`.
-* A `StreamingRuntime` object to configure the streaming engine.
+* **Segundo modulo** --> ./solucionadorProblema.sh distanceFile.prbd costFile.prbd generacion.txt DirectorioSalida 2000
 
-The implementation of jMetalSP applies Java generics to ensure that all the componentes are compatible. The declaration of the [`jMetalSPApplication`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-core/src/main/java/org/uma/jmetalsp/JMetalSPApplication.java) class and its main componentes is the following:
-```java
-public class JMetalSPApplication<
-        S extends Solution<?>,
-        P extends DynamicProblem<S, ?>,
-        A extends DynamicAlgorithm<?, ? extends ObservedData<?>>> {
-
-  private List<StreamingDataSource<?>> streamingDataSourceList;
-  private List<DataConsumer<?>> algorithmDataConsumerList;
-  private StreamingRuntime streamingRuntime;
-
-  private P problem;
-  private A algorithm;
-  ...
-}
-```
-This way, by using generics the Java compiler can check that all the components fit together. 
-
-## InDM2
-[InDM2]((https://doi.org/10.1016/j.swevo.2018.02.004)) a new dynamic multi-objective optimization algorithm that allows the preferences of the decision maker (DM) to be 
-incorporated into the search process. When solving a dynamic multi-objective optimization problem with InDM2, 
-the DM can not only express her/his preferences by means of one or more reference points, which define the desired 
-region of interest, but also those points can be also modified interactively. 
-
-## Examples
-The following example applications are included in the current development version:
-* [`DynamicContinuousApplication`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-examples/src/main/java/org/uma/jmetalsp/examples/continuousproblemapplication/DynamicContinuousApplication.java). Example of using NSGA-II, MOCell, SMPSO or WASF-GA to solve the FDA problems using the default streaming runtime, i.e. without Spark
-* [`DynamicContinuousApplicationWithSpark`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-examples/src/main/java/org/uma/jmetalsp/examples/continuousproblemapplication/DynamicContinuousApplicationWithSpark.java). Example of using NSGA-II, MOCell, SMPSO or WASF-GA to solve the FDA problems using Spark.
-* [`DynamicTSPApplication`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-examples/src/main/java/org/uma/jmetalsp/examples/dynamictsp/DynamicTSPApplication.java). Example of using NSGA-II or MOCell or SMPSO to solve a bi-objective TSP problem using the default streaming runtime, i.e. without Spark. The streaming data source simulates changes in the cost matrix (no external data source is used). This is a simplied version the algorithm presented in MOD 2016.
-* [`NSGAIIRunner`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-spark/src/main/java/org/uma/jmetalsp/spark/evaluator/NSGAIIRunner.java). This example, included in the paper to be presented in EMO 2017, shows how to configure the standard NSGA-II algorithm to solve a modified version of the ZDT1 problem using the Spark evaluator to evaluate the solutions of the population in parallel. 
-* [`InDM2RunnerForContinuousProblems`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-examples/src/main/java/org/uma/jmetalsp/examples/continuousproblemapplication/InDM2RunnerForContinuousProblems.java). This example, included in the paper published in SWEVO 2018, shows how to configure the InDM2 with Interactive R-NSGA-II and Interactive WASFGA algorithms to solve FDA problems.
-* [`InDM2RunnerForContinuousProblems3D`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-examples/src/main/java/org/uma/jmetalsp/examples/continuousproblemapplication/InDM2RunnerForContinuousProblems3D.java). This example, included in the paper published in SWEVO 2018, shows how to configure the InDM2 with Interactive R-NSGA-II and Interactive WASFGA algorithms to solve FDA problems, showing results in a 3D plot.
-* [`InDM2RunnerForNYTSP`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-examples/src/main/java/org/uma/jmetalsp/examples/dynamictsp/InDM2RunnerForNYTSP.java). This example, included in the paper to be presented in SWEVO 2018, shows how to configure the InDM2 with Interactive R-NSGA-II and Interactive WASFGA algorithms to solve TSP problem with traffic data from New York.
-
-### How to execute the Spark example
-In order to run the example [`DynamicContinuousApplicationWithSpark`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-examples/src/main/java/org/uma/jmetalsp/examples/continuousproblemapplication/DynamicContinuousApplicationWithSpark.java), it is necessary 
-to run first the [`CounterProvider`](https://github.com/jMetal/jMetalSP/blob/master/jmetalsp-externalsource/src/main/java/org/uma/jmetalsp/externalsources/CounterProvider.java) program whose goal is to store continuously in a directory files containing the data (i.e., the value of a counter) that will read by Spark in streaming.
-
-## Requirements
-To run the examples that do not use Spark you need:
-* Java JDK 8
-* Apache Maven
-* jMetal 5.5.2
-
-To execute the codes with Spark:
-* Spark 2.3.0 or later
-
-## References
-* José A. Cordero, Antonio J. Nebro, Juan J. Durillo, José García-Nieto, Ismael Navas-Delgado, José F. Aldana-Montes: "Dynamic Multi-Objective Optimization With jMetal and Spark: a Case Study". MOD 2016 ([DOI](http://dx.doi.org/10.1007/978-3-319-51469-7_9)).
-* Cristóbal Barba-González, José García-Nieto, Antonio J. Nebro and José F. Aldana-Montes. Multi-Objective Big Data Optimization with jMetal and Spark. EMO 2017 ([DOI](http://dx.doi.org/10.1007/978-3-319-54157-0_2)).
-* Cristóbal Barba-González, Antonio J. Nebro, José A. Cordero, José García-Nieto, Juan J. Durillo, Ismael Navas-Delgado, José F. Aldana-Montes. "JMetalSP: a Framework for Dynamic Multi-Objective Big Data Optimization". Applied Soft Computing. Available online May 2017. ([DOI](http://doi.org/10.1016/j.asoc.2017.05.004))
-* Antonio J. Nebro, Ana B. Ruíz, Cristóbal Barba-González, José García-Nieto, José F. Aldana, Mariano Luque. InDM2: Interactive Dynamic Multi-Objective Decision Making using Evolutionary Algorithms. Swarm and Evolutionary Computation. Volume 40, June 2018, Pages 184-195. 2018. ([DOI](https://doi.org/10.1016/j.swevo.2018.02.004))
-
+* **Tercer modulo** --> ./visorPareto.sh DirectorioSalida 2000
