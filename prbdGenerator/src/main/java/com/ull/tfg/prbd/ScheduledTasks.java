@@ -38,8 +38,6 @@ public class ScheduledTasks implements ApplicationRunner{
     @Value("${key.numStations:100}")
     private int numStations;
     
-    private int instante = 0;
-    
     private boolean done = false;
     
     
@@ -104,9 +102,8 @@ public class ScheduledTasks implements ApplicationRunner{
             pw = new PrintWriter(fichero);
             Random r = new Random();
             for (int i = 0; i < r.nextInt(5); i++) {
-            	instante += r.nextInt(petitionDelay);
-                pw.println( r.nextInt(numStations) + " " + r.nextInt(numStations) + " " + instante);
-
+            	int coste = r.nextInt(petitionDelay) + 10000;          	
+                pw.println( r.nextInt(numStations) + " " + r.nextInt(numStations) + " " + coste);
             }
 
         }

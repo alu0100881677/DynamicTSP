@@ -11,7 +11,7 @@ El repositorio contiene tres modulos distintos los cuales pueden compenetrar su 
 * El primer modulo, encargado de la generación de peticiones de movilidad es ejecutado desde el directorio raiz del repositorio mediante el comando *./generadorPeticiones.sh*. A este modulo debemos de pasarle una serie de argumentos que establezcan su funcionamiento:   
    * nombre del fichero donde se generan las peticiones. Este fichero estará en la carpeta jmetalsp-examples/Datos.
    * número de ciudades que contiene el problema para el que simulamos cambios.
-   * parametro númerico que representa el coste máximo de viajar entre dos ciudades.
+   * parametro númerico *k* . El coste de un arco varía entre 10000 y (10000 + k).
    * número de milisegundos entre la generación de cada cambio (5 segundos = 5000)
 
 * El segundo modulo, es el encargado de resolver el problema, para ello hace uso del algoritmo nsga-ii. Para configurar este modulo debemos de pasar una serie de parametros a *./solucionadorProblema.sh*:
